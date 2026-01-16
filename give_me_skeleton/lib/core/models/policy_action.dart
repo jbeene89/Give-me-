@@ -16,25 +16,25 @@ const List<PolicyAction> kPolicyActions = [
   PolicyAction(
     id: 'social',
     name: 'Social Support',
-    description: 'Short-term happiness boost, long-term budget drag.',
+    description: 'Boosts happiness this turn, drains budget in future turns.',
     cost: 20,
   ),
   PolicyAction(
     id: 'enforce',
     name: 'Enforcement Push',
-    description: 'Reduces instability quickly, but can erode trust.',
+    description: 'Deploys control across districts; instant order, delayed trust erosion.',
     cost: 20,
   ),
   PolicyAction(
     id: 'infra',
     name: 'Infrastructure',
-    description: 'Slow productivity gains; resilience improves over time.',
+    description: 'Builds systems slowly; productivity compounds over many turns.',
     cost: 25,
   ),
   PolicyAction(
     id: 'intel',
     name: 'Intelligence',
-    description: 'Improves forecast quality; reduces surprise events later.',
+    description: 'Expands visibility into hidden systems; future events become clearer.',
     cost: 15,
   ),
 ];

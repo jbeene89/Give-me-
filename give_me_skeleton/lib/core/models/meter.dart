@@ -18,12 +18,12 @@ class MeterDef {
 }
 
 const List<MeterDef> kMeterDefs = [
-  MeterDef(MeterType.happiness, 'Happiness', 'General satisfaction and morale.'),
-  MeterDef(MeterType.instability, 'Instability', 'Crime, disorder, and volatility.'),
-  MeterDef(MeterType.safety, 'Safety', 'How safe daily life feels.'),
-  MeterDef(MeterType.productivity, 'Productivity', 'Economic output and work capacity.'),
-  MeterDef(MeterType.trust, 'Trust', 'Confidence in institutions and rules.'),
-  MeterDef(MeterType.underground, 'Underground', 'Black-market and covert activity.'),
-  MeterDef(MeterType.migration, 'Pressure', 'Movement and displacement pressure.'),
-  MeterDef(MeterType.corruption, 'Corruption', 'Leakage, bribery, and internal decay.'),
+  MeterDef(MeterType.happiness, 'Happiness', 'Satisfaction across districts.'),
+  MeterDef(MeterType.instability, 'Instability', 'Disorder spreading through systems.'),
+  MeterDef(MeterType.safety, 'Safety', 'Security felt in daily routines.'),
+  MeterDef(MeterType.productivity, 'Productivity', 'Output from economic districts.'),
+  MeterDef(MeterType.trust, 'Trust', 'Faith in the system and its allocator.'),
+  MeterDef(MeterType.underground, 'Underground', 'Shadow economy across zones.'),
+  MeterDef(MeterType.migration, 'Pressure', 'Population movement between districts.'),
+  MeterDef(MeterType.corruption, 'Corruption', 'System decay from within.'),
 ];
