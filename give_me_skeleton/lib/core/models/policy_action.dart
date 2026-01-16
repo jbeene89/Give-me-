@@ -37,4 +37,22 @@ const List<PolicyAction> kPolicyActions = [
     description: 'Expands visibility into hidden systems; future events become clearer.',
     cost: 15,
   ),
+  PolicyAction(
+    id: 'emergency',
+    name: 'Emergency Response',
+    description: 'Rapid crisis intervention; uses reserves to stabilize critical meters.',
+    cost: 30,
+  ),
+  PolicyAction(
+    id: 'stimulus',
+    name: 'Economic Stimulus',
+    description: 'Short-term productivity spike; long-term inflation and corruption risk.',
+    cost: 35,
+  ),
+  PolicyAction(
+    id: 'surveillance',
+    name: 'Surveillance Intensity',
+    description: 'Tracks underground activity and reduces uncertainty; erodes trust.',
+    cost: 25,
+  ),
 ];
