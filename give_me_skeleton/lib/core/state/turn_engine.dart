@@ -15,30 +15,35 @@ class TurnEngine {
     final meters = Map<MeterType, double>.from(state.meters);
     double legitimacyDelta = 0;
     double clarityDelta = 0;
+    double workforceDelta = 0;
 
     void bump(MeterType m, double delta) {
       meters[m] = (meters[m]! + delta).clamp(0.0, 100.0);
     }
 
-    // Immediate effects
+    // Immediate effects, scaled by workforce capacity
+    final workforceMultiplier = (state.workforceCapacity / 100) * 0.5 + 0.75; // 0.75x to 1.25x
+
     switch (action.id) {
       case 'social':
-        bump(MeterType.happiness, +8);
-        bump(MeterType.instability, -2);
+        bump(MeterType.happiness, +8 * workforceMultiplier);
+        bump(MeterType.instability, -2 * workforceMultiplier);
         bump(MeterType.productivity, -1);
         legitimacyDelta = +2; // Popular action
         break;
       case 'enforce':
-        bump(MeterType.instability, -7);
+        bump(MeterType.instability, -7 * workforceMultiplier);
         bump(MeterType.trust, -4);
         bump(MeterType.underground, +3);
         legitimacyDelta = -3; // Unpopular authoritarian action
+        workforceDelta = -2; // Enforcement diverts labor
         break;
       case 'infra':
-        bump(MeterType.productivity, +5);
+        bump(MeterType.productivity, +5 * workforceMultiplier);
         bump(MeterType.happiness, +2);
         bump(MeterType.corruption, +1);
         legitimacyDelta = +1; // Moderately popular
+        workforceDelta = +3; // Infrastructure builds capacity
         break;
       case 'intel':
         bump(MeterType.underground, -2);
@@ -53,6 +58,7 @@ class TurnEngine {
       meters: meters,
       legitimacy: (state.legitimacy + legitimacyDelta).clamp(0.0, 100.0),
       informationClarity: (state.informationClarity + clarityDelta).clamp(0.0, 100.0),
+      workforceCapacity: (state.workforceCapacity + workforceDelta).clamp(0.0, 100.0),
     );
 
     return next;
@@ -118,12 +124,21 @@ class TurnEngine {
     // Information clarity decays without active intelligence work
     final newClarity = (state.informationClarity - 1.2).clamp(0.0, 100.0);
 
+    // Workforce capacity drifts based on safety and happiness
+    final safety = meters[MeterType.safety]!;
+    final workforceDrift = (happiness - 50) * 0.04 + (safety - 50) * 0.03 - 0.5;
+    final newWorkforce = (state.workforceCapacity + workforceDrift).clamp(0.0, 100.0);
+
     // Budget refresh per turn, tied weakly to productivity and corruption.
     final productivity = meters[MeterType.productivity]!;
     final corruption = meters[MeterType.corruption]!;
     final income = (40 + (productivity - 50) * 0.6 - (corruption - 50) * 0.4)
         .round()
         .clamp(10, 120);
+
+    // Emergency reserves can be auto-saved (5% of income)
+    final reserveAddition = (income * 0.05).round().clamp(0, 10);
+    final newReserves = (state.emergencyReserves + reserveAddition).clamp(0, 200);
 
     // Check for collapse after drift
     final collapseReason = checkCollapse(meters, newLegitimacy);
@@ -134,6 +149,8 @@ class TurnEngine {
       meters: meters,
       legitimacy: newLegitimacy,
       informationClarity: newClarity,
+      workforceCapacity: newWorkforce,
+      emergencyReserves: newReserves,
       isCollapsed: collapseReason != null,
       collapseReason: collapseReason,
     );

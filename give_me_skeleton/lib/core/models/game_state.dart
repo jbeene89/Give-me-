@@ -8,6 +8,8 @@ class GameState {
   final String? collapseReason;
   final double legitimacy; // Your authority to act (0-100)
   final double informationClarity; // How well you see the system (0-100)
+  final double workforceCapacity; // Available labor for projects (0-100)
+  final int emergencyReserves; // Saved budget for crisis response
 
   const GameState({
     required this.turn,
@@ -17,6 +19,8 @@ class GameState {
     this.collapseReason,
     this.legitimacy = 70.0,
     this.informationClarity = 50.0,
+    this.workforceCapacity = 60.0,
+    this.emergencyReserves = 0,
   });
 
   factory GameState.initial() {
@@ -37,6 +41,8 @@ class GameState {
     String? collapseReason,
     double? legitimacy,
     double? informationClarity,
+    double? workforceCapacity,
+    int? emergencyReserves,
   }) {
     return GameState(
       turn: turn ?? this.turn,
@@ -46,6 +52,8 @@ class GameState {
       collapseReason: collapseReason ?? this.collapseReason,
       legitimacy: legitimacy ?? this.legitimacy,
       informationClarity: informationClarity ?? this.informationClarity,
+      workforceCapacity: workforceCapacity ?? this.workforceCapacity,
+      emergencyReserves: emergencyReserves ?? this.emergencyReserves,
     );
   }
 }
