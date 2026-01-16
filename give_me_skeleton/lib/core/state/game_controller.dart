@@ -1,0 +1,40 @@
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+import '../models/game_state.dart';
+import '../models/policy_action.dart';
+import 'turn_engine.dart';
+import '../services/analytics_service.dart';
+
+final turnEngineProvider = Provider<TurnEngine>((ref) => const TurnEngine());
+
+final gameControllerProvider = StateNotifierProvider<GameController, GameState>((ref) {
+  final engine = ref.watch(turnEngineProvider);
+  final analytics = ref.watch(analyticsServiceProvider);
+  return GameController(engine: engine, analytics: analytics);
+});
+
+class GameController extends StateNotifier<GameState> {
+  final TurnEngine engine;
+  final AnalyticsService analytics;
+
+  GameController({required this.engine, required this.analytics}) : super(GameState.initial());
+
+  void reset() {
+    state = GameState.initial();
+    analytics.logEvent('game_reset');
+  }
+
+  void applyAction(PolicyAction action) {
+    final beforeBudget = state.budget;
+    state = engine.applyAction(state, action);
+
+    if (state.budget != beforeBudget) {
+      analytics.logEvent('action_applied', params: {'id': action.id, 'cost': action.cost});
+    }
+  }
+
+  void endTurn() {
+    state = engine.endTurn(state);
+    analytics.logEvent('turn_end', params: {'turn': state.turn});
+  }
+}
