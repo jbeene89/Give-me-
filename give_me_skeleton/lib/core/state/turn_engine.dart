@@ -223,12 +223,11 @@ class TurnEngine {
       collapseReason: collapseReason,
     );
 
-    // Apply event engine if available (seeded with turn number for determinism)
+    // Apply event engine if available (uses internal deterministic seeding)
     if (eventEngine != null && !nextState.isCollapsed) {
       final eventResult = eventEngine!.applyTurnEvents(
         nextState,
         nextState.turn,
-        seed: nextState.turn, // Deterministic seed based on turn
       );
       nextState = eventResult.updatedState;
       // Event log is tracked internally by EventEngine
