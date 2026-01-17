@@ -36,6 +36,10 @@ class EventEngine {
 
   int _currentTurn = 0;
 
+  // Cache for perceived meter values (deterministic within a turn, prevents rebuild flicker)
+  int _perceivedValuesCacheTurn = -1;
+  final Map<MeterType, double> _perceivedValuesCache = {};
+
   EventEngine({int? seed})
       : _initialSeed = seed ?? 0,
         fogMechanics = FogMechanics(Random(seed != null ? seed + 1 : null));
@@ -190,14 +194,56 @@ class EventEngine {
   }
 
   /// Get meter value with fog applied (for UI display)
-  double getPerceivedMeterValue(MeterType meterType, double actualValue, double clarity) {
-    // Check if meter is in blind spot
-    if (fogMechanics.isMeterHidden(meterType, clarity)) {
-      return double.nan; // Signal that meter should be hidden
+  /// Uses turn-based caching to ensure deterministic values within a turn (no rebuild flicker)
+  double getPerceivedMeterValue(MeterType meterType, double actualValue, double clarity, int turn) {
+    // Clear cache if turn changed
+    if (turn != _perceivedValuesCacheTurn) {
+      _perceivedValuesCacheTurn = turn;
+      _perceivedValuesCache.clear();
     }
 
-    // Apply noise
-    return fogMechanics.applyNoiseToMeterValue(actualValue, clarity);
+    // Return cached value if exists
+    if (_perceivedValuesCache.containsKey(meterType)) {
+      return _perceivedValuesCache[meterType]!;
+    }
+
+    // Calculate perceived value
+    double perceived;
+
+    // Check if meter is in blind spot
+    if (fogMechanics.isMeterHidden(meterType, clarity)) {
+      perceived = double.nan; // Signal that meter should be hidden
+    } else {
+      // Apply deterministic noise based on (seed, turn, meterType)
+      perceived = _applyDeterministicNoise(actualValue, clarity, turn, meterType);
+    }
+
+    // Cache and return
+    _perceivedValuesCache[meterType] = perceived;
+    return perceived;
+  }
+
+  /// Apply fog noise deterministically based on turn and meter type
+  /// This ensures same (seed, turn, meter) always produces same noise
+  double _applyDeterministicNoise(double actualValue, double clarity, int turn, MeterType meterType) {
+    if (clarity >= FogMechanics.clarityThresholdForNoise) {
+      return actualValue; // No noise when clarity is high
+    }
+
+    // Create deterministic seed for this specific (turn, meterType) combination
+    final noiseSeed = (_initialSeed * 31 + turn * 17 + meterType.index * 13) & 0x7FFFFFFF;
+    final noiseRng = Random(noiseSeed);
+
+    // Calculate noise magnitude based on how low clarity is
+    final noiseFactor = 1.0 - (clarity / FogMechanics.clarityThresholdForNoise);
+    final maxNoise = actualValue * FogMechanics.maxNoisePercentage * noiseFactor;
+
+    // Add random noise ±maxNoise
+    final noise = (noiseRng.nextDouble() * 2 - 1) * maxNoise;
+    final perceivedValue = actualValue + noise;
+
+    // Clamp to valid range [0, 100]
+    return perceivedValue.clamp(0.0, 100.0);
   }
 
   /// Get list of meters currently hidden by blind spots
@@ -221,6 +267,8 @@ class EventEngine {
     _eventCooldowns.clear();
     _delayedQueue.clear();
     _currentTurn = 0;
+    _perceivedValuesCache.clear();
+    _perceivedValuesCacheTurn = -1;
   }
 
   /// Get upcoming delayed effects (for debugging/testing)
