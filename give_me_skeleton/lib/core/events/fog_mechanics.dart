@@ -1,5 +1,5 @@
 import 'dart:math';
-import '../../give_me_skeleton/lib/core/models/meter.dart';
+import '../models/meter.dart';
 import 'models/event_effect.dart';
 
 /// Implements information fog mechanics: noisy data, blind spots, delayed feedback

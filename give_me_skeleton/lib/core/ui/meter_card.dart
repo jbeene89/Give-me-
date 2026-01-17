@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import '../models/meter.dart';
-import '../../../dropzone/events/fog_mechanics.dart';
+import '../events/fog_mechanics.dart';
 
 class MeterCard extends StatelessWidget {
   final String title;

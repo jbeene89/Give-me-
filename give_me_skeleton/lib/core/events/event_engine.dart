@@ -1,6 +1,6 @@
 import 'dart:math';
-import '../../give_me_skeleton/lib/core/models/game_state.dart';
-import '../../give_me_skeleton/lib/core/models/meter.dart';
+import '../models/game_state.dart';
+import '../models/meter.dart';
 import 'models/event.dart';
 import 'models/event_effect.dart';
 import 'models/event_log_entry.dart';

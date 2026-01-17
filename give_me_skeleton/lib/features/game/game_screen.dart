@@ -21,6 +21,7 @@ class _GameScreenState extends ConsumerState<GameScreen> {
   Widget build(BuildContext context) {
     final state = ref.watch(gameControllerProvider);
     final controller = ref.read(gameControllerProvider.notifier);
+    final eventEngine = ref.read(eventEngineProvider);
 
     // Reset dialog flag when game is reset
     if (!state.isCollapsed && _hasShownCollapseDialog) {
@@ -285,11 +286,17 @@ class _GameScreenState extends ConsumerState<GameScreen> {
                     itemCount: kMeterDefs.length,
                     itemBuilder: (context, i) {
                       final def = kMeterDefs[i];
-                      final value = state.meters[def.type] ?? 0;
+                      final actualValue = state.meters[def.type] ?? 0;
+                      // Apply fog mechanics to get perceived value
+                      final perceivedValue = eventEngine.getPerceivedMeterValue(
+                        def.type,
+                        actualValue,
+                        state.informationClarity,
+                      );
                       return MeterCard(
                         title: def.label,
                         hint: def.hint,
-                        value: value,
+                        value: perceivedValue,
                         clarity: state.informationClarity,
                         meterType: def.type,
                       );

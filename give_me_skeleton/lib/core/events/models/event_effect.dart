@@ -1,4 +1,4 @@
-import '../../../give_me_skeleton/lib/core/models/meter.dart';
+import '../../models/meter.dart';
 
 /// Represents a single effect on a meter
 class EventEffect {
