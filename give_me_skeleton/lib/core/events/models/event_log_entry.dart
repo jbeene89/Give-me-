@@ -1,4 +1,4 @@
-import '../../../give_me_skeleton/lib/core/models/meter.dart';
+import '../../models/meter.dart';
 import 'event_effect.dart';
 
 /// Represents a logged event with actual vs perceived effects

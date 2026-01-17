@@ -4,7 +4,7 @@ import '../models/game_state.dart';
 import '../models/policy_action.dart';
 import 'turn_engine.dart';
 import '../services/analytics_service.dart';
-import '../../../dropzone/events/event_engine.dart';
+import '../events/event_engine.dart';
 
 // Create event engine with seed for reproducibility
 final eventEngineProvider = Provider<EventEngine>((ref) => EventEngine(seed: 42));

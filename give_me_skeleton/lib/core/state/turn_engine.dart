@@ -1,7 +1,7 @@
 import '../models/game_state.dart';
 import '../models/meter.dart';
 import '../models/policy_action.dart';
-import '../../../dropzone/events/event_engine.dart';
+import '../events/event_engine.dart';
 
 /// A deliberately simple "toy" simulation.
 ///
