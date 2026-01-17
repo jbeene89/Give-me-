@@ -1,6 +1,6 @@
 import 'dart:math';
-import '../give_me_skeleton/lib/core/models/game_state.dart';
-import '../give_me_skeleton/lib/core/models/meter.dart';
+import '../../give_me_skeleton/lib/core/models/game_state.dart';
+import '../../give_me_skeleton/lib/core/models/meter.dart';
 import 'models/event.dart';
 import 'models/event_effect.dart';
 import 'models/event_log_entry.dart';
@@ -21,7 +21,7 @@ class EventTurnResult {
 /// Main Event Engine - manages event triggering, delayed effects, and logging
 /// Uses seeded RNG for reproducibility
 class EventEngine {
-  final Random _random;
+  final int _initialSeed; // Stored for deterministic per-turn seeding
   final FogMechanics fogMechanics;
   final DelayedEffectQueue _delayedQueue = DelayedEffectQueue();
   final List<EventLogEntry> _eventLog = [];
@@ -37,13 +37,20 @@ class EventEngine {
   int _currentTurn = 0;
 
   EventEngine({int? seed})
-      : _random = Random(seed),
+      : _initialSeed = seed ?? 0,
         fogMechanics = FogMechanics(Random(seed != null ? seed + 1 : null));
 
   /// Compatibility-safe API: Apply events for a turn and return updated GameState
   /// This is the main integration point for TurnEngine
-  EventTurnResult applyTurnEvents(GameState state, int turn, {int? seed}) {
+  /// Uses deterministic seeding: seed = hash(initialSeed, turn) for reproducibility
+  EventTurnResult applyTurnEvents(GameState state, int turn) {
     _currentTurn = turn;
+
+    // Create turn-specific RNG for deterministic, reproducible events
+    // This ensures same initial seed + same turn = same events
+    // Formula: combine initial seed with turn using hash-like mixing
+    final turnSeed = (_initialSeed * 31 + turn * 17) & 0x7FFFFFFF;
+    final turnRandom = Random(turnSeed);
 
     // Step 1: Apply delayed effects from previous turns
     final delayedEffects = _delayedQueue.popEffectsForTurn(turn);
@@ -53,11 +60,11 @@ class EventEngine {
       _applyEffectToMeters(meters, effect);
     }
 
-    // Step 2: Check and trigger events
+    // Step 2: Check and trigger events (using turn-specific Random)
     final triggeredEvents = <GameEvent>[];
     triggeredEvents.addAll(_checkThresholdEvents(meters));
-    triggeredEvents.addAll(_checkCompoundEvents());
-    triggeredEvents.addAll(_checkRandomEvents());
+    triggeredEvents.addAll(_checkCompoundEvents(turnRandom));
+    triggeredEvents.addAll(_checkRandomEvents(turnRandom));
 
     // Step 3: Apply immediate effects and create log entries
     final logEntries = <EventLogEntry>[];
@@ -136,7 +143,7 @@ class EventEngine {
   }
 
   /// Check compound events (chain reactions)
-  List<GameEvent> _checkCompoundEvents() {
+  List<GameEvent> _checkCompoundEvents(Random rng) {
     final triggered = <GameEvent>[];
 
     for (final event in EventCatalog.compoundEvents) {
@@ -149,7 +156,7 @@ class EventEngine {
       // Check if triggering event happened last turn
       if (_lastTurnEventIds.contains(compoundTrigger.triggeringEventId)) {
         // Roll for compound event with boosted probability
-        if (_random.nextDouble() < compoundTrigger.probabilityBoost) {
+        if (rng.nextDouble() < compoundTrigger.probabilityBoost) {
           triggered.add(event);
         }
       }
@@ -159,7 +166,7 @@ class EventEngine {
   }
 
   /// Check random events
-  List<GameEvent> _checkRandomEvents() {
+  List<GameEvent> _checkRandomEvents(Random rng) {
     final triggered = <GameEvent>[];
 
     for (final event in EventCatalog.randomEvents) {
@@ -167,7 +174,7 @@ class EventEngine {
       if (_isOnCooldown(event.id)) continue;
 
       // Roll for random event
-      if (_random.nextDouble() < event.baseProbability) {
+      if (rng.nextDouble() < event.baseProbability) {
         triggered.add(event);
       }
     }

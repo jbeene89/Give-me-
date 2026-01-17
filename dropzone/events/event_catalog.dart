@@ -1,4 +1,4 @@
-import '../give_me_skeleton/lib/core/models/meter.dart';
+import '../../give_me_skeleton/lib/core/models/meter.dart';
 import 'models/event.dart';
 import 'models/event_effect.dart';
 
