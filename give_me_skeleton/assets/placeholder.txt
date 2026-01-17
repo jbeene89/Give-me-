@@ -1,0 +1,3 @@
+Put images, icons, and audio here.
+
+Tip: keep monetization art assets (offer cards, bundle icons) in a separate subfolder.
