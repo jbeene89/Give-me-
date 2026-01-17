@@ -1,3 +1,4 @@
+import '../../../give_me_skeleton/lib/core/models/meter.dart';
 import 'event_effect.dart';
 
 /// Trigger type for events
@@ -9,18 +10,18 @@ enum EventTriggerType {
 
 /// Trigger condition for threshold-based events
 class ThresholdTrigger {
-  final String meterId;
-  final double threshold;
+  final MeterType meterType;
+  final double threshold; // 0-100 range
   final bool triggerAbove; // true = trigger when above, false = when below
 
   const ThresholdTrigger({
-    required this.meterId,
+    required this.meterType,
     required this.threshold,
     required this.triggerAbove,
   });
 
-  bool check(Map<String, double> meterValues) {
-    final value = meterValues[meterId] ?? 0.5;
+  bool check(Map<MeterType, double> meterValues) {
+    final value = meterValues[meterType] ?? 50.0; // Default to middle value
     return triggerAbove ? value >= threshold : value <= threshold;
   }
 }

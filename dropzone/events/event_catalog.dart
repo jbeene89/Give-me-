@@ -1,3 +1,4 @@
+import '../give_me_skeleton/lib/core/models/meter.dart';
 import 'models/event.dart';
 import 'models/event_effect.dart';
 
@@ -6,6 +7,14 @@ import 'models/event_effect.dart';
 /// - 5+ random events
 /// - 3+ threshold-triggered events
 /// - 2+ compound events (chain reactions)
+///
+/// Meter mapping from original design to canonical MeterType:
+/// - stability -> instability (INVERTED: -stability = +instability)
+/// - capacity -> productivity
+/// - morale -> happiness
+/// - efficiency -> productivity
+/// - reserves -> safety (thematic: reserves provide safety net)
+/// - clarity -> trust (thematic: good information builds trust)
 class EventCatalog {
   static const List<GameEvent> allEvents = [
     // ========== RANDOM EVENTS (5+) ==========
@@ -18,8 +27,8 @@ class EventCatalog {
       triggerType: EventTriggerType.random,
       baseProbability: 0.15,
       effects: [
-        EventEffect(meterId: 'stability', delta: -0.08),
-        EventEffect(meterId: 'efficiency', delta: -0.05),
+        EventEffect(meterType: MeterType.instability, delta: +8.0), // was -stability
+        EventEffect(meterType: MeterType.productivity, delta: -5.0), // was -efficiency
       ],
     ),
 
@@ -31,9 +40,9 @@ class EventCatalog {
       triggerType: EventTriggerType.random,
       baseProbability: 0.12,
       effects: [
-        EventEffect(meterId: 'capacity', delta: -0.06),
-        EventEffect(meterId: 'clarity', delta: -0.10),
-        EventEffect(meterId: 'morale', delta: -0.04),
+        EventEffect(meterType: MeterType.productivity, delta: -6.0), // was -capacity
+        EventEffect(meterType: MeterType.trust, delta: -10.0), // was -clarity
+        EventEffect(meterType: MeterType.happiness, delta: -4.0), // was -morale
       ],
     ),
 
@@ -45,8 +54,8 @@ class EventCatalog {
       triggerType: EventTriggerType.random,
       baseProbability: 0.10,
       effects: [
-        EventEffect(meterId: 'capacity', delta: -0.10),
-        EventEffect(meterId: 'efficiency', delta: -0.08, delayTurns: 1), // Delayed impact
+        EventEffect(meterType: MeterType.productivity, delta: -10.0), // was -capacity
+        EventEffect(meterType: MeterType.productivity, delta: -8.0, delayTurns: 1), // delayed efficiency hit
       ],
     ),
 
@@ -58,9 +67,9 @@ class EventCatalog {
       triggerType: EventTriggerType.random,
       baseProbability: 0.08,
       effects: [
-        EventEffect(meterId: 'stability', delta: -0.12),
-        EventEffect(meterId: 'capacity', delta: -0.07),
-        EventEffect(meterId: 'clarity', delta: -0.05),
+        EventEffect(meterType: MeterType.instability, delta: +12.0), // was -stability
+        EventEffect(meterType: MeterType.productivity, delta: -7.0), // was -capacity
+        EventEffect(meterType: MeterType.trust, delta: -5.0), // was -clarity
       ],
     ),
 
@@ -72,8 +81,8 @@ class EventCatalog {
       triggerType: EventTriggerType.random,
       baseProbability: 0.10,
       effects: [
-        EventEffect(meterId: 'reserves', delta: -0.10), // Affects blind spot meter
-        EventEffect(meterId: 'stability', delta: -0.06, delayTurns: 2), // Very delayed
+        EventEffect(meterType: MeterType.safety, delta: -10.0), // was -reserves
+        EventEffect(meterType: MeterType.instability, delta: +6.0, delayTurns: 2), // was -stability delayed
       ],
     ),
 
@@ -85,82 +94,82 @@ class EventCatalog {
       triggerType: EventTriggerType.random,
       baseProbability: 0.11,
       effects: [
-        EventEffect(meterId: 'clarity', delta: -0.15),
-        EventEffect(meterId: 'efficiency', delta: -0.04),
+        EventEffect(meterType: MeterType.trust, delta: -15.0), // was -clarity
+        EventEffect(meterType: MeterType.productivity, delta: -4.0), // was -efficiency
       ],
     ),
 
     // ========== THRESHOLD-TRIGGERED EVENTS (3+) ==========
 
-    // 7. Critical Strain - triggered when capacity drops too low
+    // 7. Critical Strain - triggered when productivity drops too low
     GameEvent(
       id: 'threshold_strain',
       name: 'Critical Strain',
       cause: 'Workforce capacity fell below operational minimum, triggering cascading delays',
       triggerType: EventTriggerType.threshold,
       thresholdTrigger: ThresholdTrigger(
-        meterId: 'capacity',
-        threshold: 0.30,
-        triggerAbove: false, // Trigger when below 30%
+        meterType: MeterType.productivity,
+        threshold: 30.0,
+        triggerAbove: false, // Trigger when below 30
       ),
       effects: [
-        EventEffect(meterId: 'stability', delta: -0.15),
-        EventEffect(meterId: 'morale', delta: -0.10),
-        EventEffect(meterId: 'efficiency', delta: -0.08, delayTurns: 1),
+        EventEffect(meterType: MeterType.instability, delta: +15.0), // was -stability
+        EventEffect(meterType: MeterType.happiness, delta: -10.0), // was -morale
+        EventEffect(meterType: MeterType.productivity, delta: -8.0, delayTurns: 1), // was -efficiency delayed
       ],
     ),
 
-    // 8. Instability Cascade - triggered when stability drops too low
+    // 8. Instability Cascade - triggered when instability rises too high
     GameEvent(
       id: 'threshold_instability',
       name: 'Instability Cascade',
-      cause: 'District stability fell below critical threshold, causing chain reaction of failures',
+      cause: 'District instability exceeded critical threshold, causing chain reaction of failures',
       triggerType: EventTriggerType.threshold,
       thresholdTrigger: ThresholdTrigger(
-        meterId: 'stability',
-        threshold: 0.25,
-        triggerAbove: false, // Trigger when below 25%
+        meterType: MeterType.instability,
+        threshold: 75.0,
+        triggerAbove: true, // Trigger when above 75
       ),
       effects: [
-        EventEffect(meterId: 'capacity', delta: -0.12),
-        EventEffect(meterId: 'reserves', delta: -0.10),
-        EventEffect(meterId: 'clarity', delta: -0.08),
+        EventEffect(meterType: MeterType.productivity, delta: -12.0), // was -capacity
+        EventEffect(meterType: MeterType.safety, delta: -10.0), // was -reserves
+        EventEffect(meterType: MeterType.trust, delta: -8.0), // was -clarity
       ],
     ),
 
-    // 9. Information Blackout - triggered when clarity drops too low
+    // 9. Information Blackout - triggered when trust drops too low
     GameEvent(
       id: 'threshold_blackout',
       name: 'Information Blackout',
       cause: 'Situational clarity fell so low that coordination became nearly impossible',
       triggerType: EventTriggerType.threshold,
       thresholdTrigger: ThresholdTrigger(
-        meterId: 'clarity',
-        threshold: 0.35,
-        triggerAbove: false, // Trigger when below 35%
+        meterType: MeterType.trust,
+        threshold: 35.0,
+        triggerAbove: false, // Trigger when below 35
       ),
       effects: [
-        EventEffect(meterId: 'efficiency', delta: -0.10),
-        EventEffect(meterId: 'stability', delta: -0.08),
-        EventEffect(meterId: 'capacity', delta: -0.06, delayTurns: 1),
+        EventEffect(meterType: MeterType.productivity, delta: -10.0), // was -efficiency
+        EventEffect(meterType: MeterType.instability, delta: +8.0), // was -stability
+        EventEffect(meterType: MeterType.productivity, delta: -6.0, delayTurns: 1), // was -capacity delayed
       ],
     ),
 
-    // 10. Reserve Depletion Crisis - triggered when reserves drop too low
+    // 10. Safety Crisis - triggered when safety drops too low
     GameEvent(
-      id: 'threshold_reserve_crisis',
-      name: 'Reserve Depletion Crisis',
-      cause: 'Emergency reserves exhausted, leaving no buffer for unexpected demands',
+      id: 'threshold_safety_crisis',
+      name: 'Safety Crisis',
+      cause: 'Safety reserves exhausted, leaving no buffer for unexpected demands',
       triggerType: EventTriggerType.threshold,
       thresholdTrigger: ThresholdTrigger(
-        meterId: 'reserves',
-        threshold: 0.20,
+        meterType: MeterType.safety,
+        threshold: 20.0,
         triggerAbove: false,
       ),
       effects: [
-        EventEffect(meterId: 'stability', delta: -0.14),
-        EventEffect(meterId: 'capacity', delta: -0.10),
-        EventEffect(meterId: 'morale', delta: -0.08),
+        EventEffect(meterType: MeterType.instability, delta: +14.0), // was -stability
+        EventEffect(meterType: MeterType.productivity, delta: -10.0), // was -capacity
+        EventEffect(meterType: MeterType.happiness, delta: -8.0), // was -morale
       ],
     ),
 
@@ -177,9 +186,9 @@ class EventCatalog {
         probabilityBoost: 0.60, // 60% chance after triggering event
       ),
       effects: [
-        EventEffect(meterId: 'capacity', delta: -0.10),
-        EventEffect(meterId: 'efficiency', delta: -0.12),
-        EventEffect(meterId: 'reserves', delta: -0.08, delayTurns: 1),
+        EventEffect(meterType: MeterType.productivity, delta: -10.0), // was -capacity
+        EventEffect(meterType: MeterType.productivity, delta: -12.0), // was -efficiency
+        EventEffect(meterType: MeterType.safety, delta: -8.0, delayTurns: 1), // was -reserves delayed
       ],
     ),
 
@@ -194,9 +203,9 @@ class EventCatalog {
         probabilityBoost: 0.50, // 50% chance after triggering event
       ),
       effects: [
-        EventEffect(meterId: 'clarity', delta: -0.12),
-        EventEffect(meterId: 'reserves', delta: -0.10),
-        EventEffect(meterId: 'stability', delta: -0.06, delayTurns: 1),
+        EventEffect(meterType: MeterType.trust, delta: -12.0), // was -clarity
+        EventEffect(meterType: MeterType.safety, delta: -10.0), // was -reserves
+        EventEffect(meterType: MeterType.instability, delta: +6.0, delayTurns: 1), // was -stability delayed
       ],
     ),
 
@@ -211,9 +220,9 @@ class EventCatalog {
         probabilityBoost: 0.40, // 40% chance after measurement error
       ),
       effects: [
-        EventEffect(meterId: 'clarity', delta: -0.10),
-        EventEffect(meterId: 'efficiency', delta: -0.08),
-        EventEffect(meterId: 'stability', delta: -0.05, delayTurns: 2),
+        EventEffect(meterType: MeterType.trust, delta: -10.0), // was -clarity
+        EventEffect(meterType: MeterType.productivity, delta: -8.0), // was -efficiency
+        EventEffect(meterType: MeterType.instability, delta: +5.0, delayTurns: 2), // was -stability delayed
       ],
     ),
   ];

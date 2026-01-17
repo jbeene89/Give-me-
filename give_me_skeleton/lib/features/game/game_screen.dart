@@ -7,17 +7,31 @@ import '../../core/models/policy_action.dart';
 import '../../core/state/game_controller.dart';
 import '../../core/ui/meter_card.dart';
 
-class GameScreen extends ConsumerWidget {
+class GameScreen extends ConsumerStatefulWidget {
   const GameScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<GameScreen> createState() => _GameScreenState();
+}
+
+class _GameScreenState extends ConsumerState<GameScreen> {
+  bool _hasShownCollapseDialog = false;
+
+  @override
+  Widget build(BuildContext context) {
     final state = ref.watch(gameControllerProvider);
     final controller = ref.read(gameControllerProvider.notifier);
 
-    // Show collapse dialog if collapsed
-    if (state.isCollapsed) {
+    // Reset dialog flag when game is reset
+    if (!state.isCollapsed && _hasShownCollapseDialog) {
+      _hasShownCollapseDialog = false;
+    }
+
+    // Show collapse dialog if collapsed (with guard to prevent multiple shows)
+    if (state.isCollapsed && !_hasShownCollapseDialog) {
+      _hasShownCollapseDialog = true;
       WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
         showDialog(
           context: context,
           barrierDismissible: false,
@@ -272,7 +286,13 @@ class GameScreen extends ConsumerWidget {
                     itemBuilder: (context, i) {
                       final def = kMeterDefs[i];
                       final value = state.meters[def.type] ?? 0;
-                      return MeterCard(title: def.label, hint: def.hint, value: value);
+                      return MeterCard(
+                        title: def.label,
+                        hint: def.hint,
+                        value: value,
+                        clarity: state.informationClarity,
+                        meterType: def.type,
+                      );
                     },
                   ),
                   const SizedBox(height: 16),

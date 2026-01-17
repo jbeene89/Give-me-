@@ -4,8 +4,15 @@ import '../models/game_state.dart';
 import '../models/policy_action.dart';
 import 'turn_engine.dart';
 import '../services/analytics_service.dart';
+import '../../../dropzone/events/event_engine.dart';
 
-final turnEngineProvider = Provider<TurnEngine>((ref) => const TurnEngine());
+// Create event engine with seed for reproducibility
+final eventEngineProvider = Provider<EventEngine>((ref) => EventEngine(seed: 42));
+
+final turnEngineProvider = Provider<TurnEngine>((ref) {
+  final eventEngine = ref.watch(eventEngineProvider);
+  return TurnEngine(eventEngine: eventEngine);
+});
 
 final gameControllerProvider = StateNotifierProvider<GameController, GameState>((ref) {
   final engine = ref.watch(turnEngineProvider);

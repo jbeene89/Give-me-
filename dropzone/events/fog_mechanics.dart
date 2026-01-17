@@ -1,19 +1,21 @@
 import 'dart:math';
+import '../give_me_skeleton/lib/core/models/meter.dart';
 import 'models/event_effect.dart';
 
 /// Implements information fog mechanics: noisy data, blind spots, delayed feedback
+/// Works with informationClarity in 0-100 range
 class FogMechanics {
   final Random _random;
 
-  // Configuration constants
-  static const double clarityThresholdForNoise = 0.6;
-  static const double clarityThresholdForBlindSpots = 0.4;
+  // Configuration constants (0-100 scale)
+  static const double clarityThresholdForNoise = 60.0; // Below 60, noise appears
+  static const double clarityThresholdForBlindSpots = 40.0; // Below 40, blind spots appear
   static const double maxNoisePercentage = 0.15; // ±15% error at worst
-  static const List<String> blindSpotMeters = ['reserves', 'efficiency'];
+  static const List<MeterType> blindSpotMeters = [MeterType.corruption, MeterType.underground];
 
   FogMechanics(this._random);
 
-  /// Apply noise to a meter value based on clarity
+  /// Apply noise to a meter value based on informationClarity (0-100)
   /// Returns the perceived value (with noise) that should be shown to player
   double applyNoiseToMeterValue(double actualValue, double clarity) {
     if (clarity >= clarityThresholdForNoise) {
@@ -22,17 +24,17 @@ class FogMechanics {
 
     // Calculate noise magnitude based on how low clarity is
     final noiseFactor = 1.0 - (clarity / clarityThresholdForNoise);
-    final maxNoise = maxNoisePercentage * noiseFactor;
+    final maxNoise = actualValue * maxNoisePercentage * noiseFactor;
 
     // Add random noise ±maxNoise
     final noise = (_random.nextDouble() * 2 - 1) * maxNoise;
     final perceivedValue = actualValue + noise;
 
-    // Clamp to valid range [0, 1]
-    return perceivedValue.clamp(0.0, 1.0);
+    // Clamp to valid range [0, 100]
+    return perceivedValue.clamp(0.0, 100.0);
   }
 
-  /// Apply noise to event effects based on clarity
+  /// Apply noise to event effects based on clarity (0-100)
   /// Returns perceived effects (what player sees) vs actual effects
   List<EventEffect> applyNoiseToEffects(
     List<EventEffect> actualEffects,
@@ -55,18 +57,18 @@ class FogMechanics {
     }).toList();
   }
 
-  /// Check if a meter should be hidden (blind spot) based on clarity
-  bool isMeterHidden(String meterId, double clarity) {
+  /// Check if a meter should be hidden (blind spot) based on clarity (0-100)
+  bool isMeterHidden(MeterType meterType, double clarity) {
     if (clarity >= clarityThresholdForBlindSpots) {
       return false; // Nothing hidden when clarity is decent
     }
 
     // Specific meters become blind spots when clarity is low
-    return blindSpotMeters.contains(meterId);
+    return blindSpotMeters.contains(meterType);
   }
 
   /// Get list of all blind spot meters at current clarity
-  List<String> getBlindSpotMeters(double clarity) {
+  List<MeterType> getBlindSpotMeters(double clarity) {
     if (clarity >= clarityThresholdForBlindSpots) {
       return [];
     }
