@@ -1,3 +1,4 @@
+import 'dart:math';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../models/game_state.dart';
@@ -6,8 +7,18 @@ import 'turn_engine.dart';
 import '../services/analytics_service.dart';
 import '../events/event_engine.dart';
 
-// Create event engine with seed for reproducibility
-final eventEngineProvider = Provider<EventEngine>((ref) => EventEngine(seed: 42));
+// Run seed provider - generates random seed by default
+// For deterministic testing/debugging, override with ProviderScope:
+//   ProviderScope(overrides: [runSeedProvider.overrideWith((ref) => 42)])
+final runSeedProvider = Provider<int>((ref) {
+  return Random().nextInt(0x7FFFFFFF);
+});
+
+// Create event engine with configurable seed for reproducibility
+final eventEngineProvider = Provider<EventEngine>((ref) {
+  final seed = ref.watch(runSeedProvider);
+  return EventEngine(seed: seed);
+});
 
 final turnEngineProvider = Provider<TurnEngine>((ref) {
   final eventEngine = ref.watch(eventEngineProvider);

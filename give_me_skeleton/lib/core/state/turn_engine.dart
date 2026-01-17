@@ -231,6 +231,15 @@ class TurnEngine {
       );
       nextState = eventResult.updatedState;
       // Event log is tracked internally by EventEngine
+
+      // Check collapse again after events (events can cause immediate collapse)
+      final postEventCollapseReason = checkCollapse(nextState.meters, nextState.legitimacy);
+      if (postEventCollapseReason != null) {
+        nextState = nextState.copyWith(
+          isCollapsed: true,
+          collapseReason: postEventCollapseReason,
+        );
+      }
     }
 
     return nextState;

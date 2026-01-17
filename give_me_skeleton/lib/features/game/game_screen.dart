@@ -287,11 +287,12 @@ class _GameScreenState extends ConsumerState<GameScreen> {
                     itemBuilder: (context, i) {
                       final def = kMeterDefs[i];
                       final actualValue = state.meters[def.type] ?? 0;
-                      // Apply fog mechanics to get perceived value
+                      // Apply fog mechanics to get perceived value (deterministic per turn)
                       final perceivedValue = eventEngine.getPerceivedMeterValue(
                         def.type,
                         actualValue,
                         state.informationClarity,
+                        state.turn, // Pass turn for deterministic caching
                       );
                       return MeterCard(
                         title: def.label,
