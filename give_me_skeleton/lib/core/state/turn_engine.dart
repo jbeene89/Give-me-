@@ -1,13 +1,16 @@
 import '../models/game_state.dart';
 import '../models/meter.dart';
 import '../models/policy_action.dart';
+import '../../../dropzone/events/event_engine.dart';
 
 /// A deliberately simple "toy" simulation.
 ///
 /// The goal is to give you something that runs, is easy to tune,
 /// and is clearly separable from UI.
 class TurnEngine {
-  const TurnEngine();
+  final EventEngine? eventEngine;
+
+  const TurnEngine({this.eventEngine});
 
   GameState applyAction(GameState state, PolicyAction action) {
     if (state.budget < action.cost) return state;
@@ -207,7 +210,8 @@ class TurnEngine {
     // Check for collapse after drift
     final collapseReason = checkCollapse(meters, newLegitimacy);
 
-    return state.copyWith(
+    // Create intermediate state before events
+    var nextState = state.copyWith(
       turn: state.turn + 1,
       budget: income,
       meters: meters,
@@ -218,5 +222,18 @@ class TurnEngine {
       isCollapsed: collapseReason != null,
       collapseReason: collapseReason,
     );
+
+    // Apply event engine if available (seeded with turn number for determinism)
+    if (eventEngine != null && !nextState.isCollapsed) {
+      final eventResult = eventEngine!.applyTurnEvents(
+        nextState,
+        nextState.turn,
+        seed: nextState.turn, // Deterministic seed based on turn
+      );
+      nextState = eventResult.updatedState;
+      // Event log is tracked internally by EventEngine
+    }
+
+    return nextState;
   }
 }

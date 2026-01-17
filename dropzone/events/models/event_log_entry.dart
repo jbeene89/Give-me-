@@ -1,3 +1,4 @@
+import '../../../give_me_skeleton/lib/core/models/meter.dart';
 import 'event_effect.dart';
 
 /// Represents a logged event with actual vs perceived effects
@@ -21,12 +22,12 @@ class EventLogEntry {
   });
 
   /// Get the perception error for a specific meter
-  double getPerceptionError(String meterId) {
+  double getPerceptionError(MeterType meterType) {
     final actual = actualEffects
-        .where((e) => e.meterId == meterId)
+        .where((e) => e.meterType == meterType)
         .fold(0.0, (sum, e) => sum + e.delta);
     final perceived = perceivedEffects
-        .where((e) => e.meterId == meterId)
+        .where((e) => e.meterType == meterType)
         .fold(0.0, (sum, e) => sum + e.delta);
     return perceived - actual;
   }

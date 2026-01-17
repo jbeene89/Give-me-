@@ -1,9 +1,22 @@
 import 'dart:math';
+import '../give_me_skeleton/lib/core/models/game_state.dart';
+import '../give_me_skeleton/lib/core/models/meter.dart';
 import 'models/event.dart';
 import 'models/event_effect.dart';
 import 'models/event_log_entry.dart';
 import 'event_catalog.dart';
 import 'fog_mechanics.dart';
+
+/// Result of applying events for a turn
+class EventTurnResult {
+  final GameState updatedState;
+  final List<EventLogEntry> newEvents;
+
+  const EventTurnResult({
+    required this.updatedState,
+    required this.newEvents,
+  });
+}
 
 /// Main Event Engine - manages event triggering, delayed effects, and logging
 /// Uses seeded RNG for reproducibility
@@ -12,6 +25,7 @@ class EventEngine {
   final FogMechanics fogMechanics;
   final DelayedEffectQueue _delayedQueue = DelayedEffectQueue();
   final List<EventLogEntry> _eventLog = [];
+  static const int maxLogEntries = 100; // Ring buffer size
 
   // Track which events triggered last turn for compound event logic
   final Set<String> _lastTurnEventIds = {};
@@ -26,38 +40,40 @@ class EventEngine {
       : _random = Random(seed),
         fogMechanics = FogMechanics(Random(seed != null ? seed + 1 : null));
 
-  /// Process a turn: check triggers, apply effects, schedule delayed effects
-  /// Returns list of events that triggered this turn
-  List<EventLogEntry> processTurn(
-    int turnNumber,
-    Map<String, double> currentMeterValues,
-  ) {
-    _currentTurn = turnNumber;
-    final triggeredEvents = <GameEvent>[];
+  /// Compatibility-safe API: Apply events for a turn and return updated GameState
+  /// This is the main integration point for TurnEngine
+  EventTurnResult applyTurnEvents(GameState state, int turn, {int? seed}) {
+    _currentTurn = turn;
 
     // Step 1: Apply delayed effects from previous turns
-    final delayedEffects = _delayedQueue.popEffectsForTurn(turnNumber);
-    // Note: Delayed effects would be applied to game state by TurnEngine
+    final delayedEffects = _delayedQueue.popEffectsForTurn(turn);
+    Map<MeterType, double> meters = Map<MeterType, double>.from(state.meters);
 
-    // Step 2: Check threshold-triggered events
-    triggeredEvents.addAll(_checkThresholdEvents(currentMeterValues));
+    for (final effect in delayedEffects) {
+      _applyEffectToMeters(meters, effect);
+    }
 
-    // Step 3: Check compound events (based on last turn's events)
+    // Step 2: Check and trigger events
+    final triggeredEvents = <GameEvent>[];
+    triggeredEvents.addAll(_checkThresholdEvents(meters));
     triggeredEvents.addAll(_checkCompoundEvents());
-
-    // Step 4: Check random events
     triggeredEvents.addAll(_checkRandomEvents());
 
-    // Step 5: Schedule delayed effects and create log entries
+    // Step 3: Apply immediate effects and create log entries
     final logEntries = <EventLogEntry>[];
     for (final event in triggeredEvents) {
+      // Apply immediate effects
+      for (final effect in event.immediateEffects) {
+        _applyEffectToMeters(meters, effect);
+      }
+
       // Schedule delayed effects
       for (final effect in event.delayedEffects) {
-        _delayedQueue.scheduleEffect(turnNumber, effect, event.id);
+        _delayedQueue.scheduleEffect(turn, effect, event.id);
       }
 
       // Create log entry with fog mechanics applied
-      final clarity = currentMeterValues['clarity'] ?? 0.5;
+      final clarity = state.informationClarity;
       final actualEffects = event.immediateEffects;
       final perceivedEffects = fogMechanics.applyNoiseToEffects(
         actualEffects,
@@ -65,7 +81,7 @@ class EventEngine {
       );
 
       logEntries.add(EventLogEntry(
-        turnNumber: turnNumber,
+        turnNumber: turn,
         eventId: event.id,
         eventName: event.name,
         cause: event.cause,
@@ -75,21 +91,35 @@ class EventEngine {
       ));
 
       // Set cooldown for this event
-      _eventCooldowns[event.id] = turnNumber + defaultCooldown;
+      _eventCooldowns[event.id] = turn + defaultCooldown;
     }
 
-    // Step 6: Update last turn events for compound tracking
+    // Step 4: Update last turn events for compound tracking
     _lastTurnEventIds.clear();
     _lastTurnEventIds.addAll(triggeredEvents.map((e) => e.id));
 
-    // Step 7: Add to log
+    // Step 5: Add to log with ring buffer (cap at maxLogEntries)
     _eventLog.addAll(logEntries);
+    if (_eventLog.length > maxLogEntries) {
+      final overflow = _eventLog.length - maxLogEntries;
+      _eventLog.removeRange(0, overflow);
+    }
 
-    return logEntries;
+    // Step 6: Return updated state with modified meters
+    return EventTurnResult(
+      updatedState: state.copyWith(meters: meters),
+      newEvents: logEntries,
+    );
+  }
+
+  /// Apply a single effect to the meters map
+  void _applyEffectToMeters(Map<MeterType, double> meters, EventEffect effect) {
+    final current = meters[effect.meterType] ?? 50.0;
+    meters[effect.meterType] = (current + effect.delta).clamp(0.0, 100.0);
   }
 
   /// Check threshold-triggered events
-  List<GameEvent> _checkThresholdEvents(Map<String, double> meterValues) {
+  List<GameEvent> _checkThresholdEvents(Map<MeterType, double> meterValues) {
     final triggered = <GameEvent>[];
 
     for (final event in EventCatalog.thresholdEvents) {
@@ -153,9 +183,9 @@ class EventEngine {
   }
 
   /// Get meter value with fog applied (for UI display)
-  double getPerceivedMeterValue(String meterId, double actualValue, double clarity) {
+  double getPerceivedMeterValue(MeterType meterType, double actualValue, double clarity) {
     // Check if meter is in blind spot
-    if (fogMechanics.isMeterHidden(meterId, clarity)) {
+    if (fogMechanics.isMeterHidden(meterType, clarity)) {
       return double.nan; // Signal that meter should be hidden
     }
 
@@ -164,7 +194,7 @@ class EventEngine {
   }
 
   /// Get list of meters currently hidden by blind spots
-  List<String> getBlindSpotMeters(double clarity) {
+  List<MeterType> getBlindSpotMeters(double clarity) {
     return fogMechanics.getBlindSpotMeters(clarity);
   }
 
